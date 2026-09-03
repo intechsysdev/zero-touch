@@ -39,40 +39,79 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Future<void> _openCreateDialog() async {
-    final payload = await showDialog<Map<String, String>>(
-      context: context,
-      builder: (_) => const DeviceFormDialog(),
-    );
+    try {
+      final options = await ref
+          .read(deviceRepositoryProvider)
+          .fetchIdentifierOptions(accessToken: widget.session.accessToken);
 
-    if (payload == null) {
-      return;
-    }
+      if (!mounted) {
+        return;
+      }
 
-    final customerId = _customerId;
-    if (customerId == null || customerId.isEmpty) {
+      final payload = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (_) => DeviceFormDialog(
+          manufacturers: options.manufacturers,
+          modelsByManufacturer: options.modelsByManufacturer,
+        ),
+      );
+
+      if (payload == null) {
+        return;
+      }
+
+      final customerId = _customerId;
+      if (customerId == null || customerId.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'No hay customerId de Zero Touch asociado al usuario.',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final identifierType =
+          (payload['identifierType'] as String?)?.trim() ?? 'imei';
+      final rawValues = (payload['identifiers'] as List<dynamic>? ?? const [])
+          .whereType<String>()
+          .toList();
+      final manufacturer = (payload['manufacturer'] as String?)?.trim() ?? '';
+      final model = (payload['model'] as String?)?.trim() ?? '';
+      final configurationId =
+          (payload['configurationId'] as String?)?.trim() ?? '';
+
+      final summary = await ref
+          .read(deviceControllerProvider.notifier)
+          .addDevicesBulk(
+            accessToken: widget.session.accessToken,
+            customerId: customerId,
+            identifierType: identifierType,
+            values: rawValues,
+            manufacturer: manufacturer,
+            model: model,
+            configurationId: configurationId.isEmpty ? null : configurationId,
+          );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'No hay customerId de Zero Touch asociado al usuario.',
+              'Carga finalizada: ${summary.successCount}/${summary.total} exitosos, ${summary.failedCount} fallidos.',
             ),
           ),
         );
       }
-      return;
-    }
-
-    await ref
-        .read(deviceControllerProvider.notifier)
-        .addDevice(
-          accessToken: widget.session.accessToken,
-          customerId: customerId,
-          imei: payload['imei']!,
-          serialNumber: payload['serialNumber']!,
-          manufacturer: payload['manufacturer']!,
-          model: payload['model']!,
-          assignedUser: payload['assignedUser']!,
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo completar la carga: $error')),
         );
+      }
+    }
   }
 
   Future<void> _deleteDevice(ManagedDevice device) async {

@@ -16,6 +16,10 @@ class AppConfig {
   // All provisioning operations must go through backend endpoints.
   static const String zeroTouchCustomersPath = '/zerotouch/customers';
   static const String zeroTouchDevicesPath = '/zerotouch/devices';
+  static const String zeroTouchDeviceIdentifierOptionsPath =
+      '/zerotouch/devices/identifier-options';
   static const String zeroTouchDeviceClaimPath = '/zerotouch/devices/claim';
+  static const String zeroTouchDeviceBulkClaimPath =
+      '/zerotouch/devices/claim/bulk';
   static const String zeroTouchDeviceUnclaimPath = '/zerotouch/devices/unclaim';
 }

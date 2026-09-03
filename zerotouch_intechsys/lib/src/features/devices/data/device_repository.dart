@@ -6,6 +6,28 @@ import '../../../core/config/app_config.dart';
 
 import '../domain/device.dart';
 
+class DeviceIdentifierOptions {
+  const DeviceIdentifierOptions({
+    required this.manufacturers,
+    required this.modelsByManufacturer,
+  });
+
+  final List<String> manufacturers;
+  final Map<String, List<String>> modelsByManufacturer;
+}
+
+class BulkClaimSummary {
+  const BulkClaimSummary({
+    required this.total,
+    required this.successCount,
+    required this.failedCount,
+  });
+
+  final int total;
+  final int successCount;
+  final int failedCount;
+}
+
 class DeviceRepository {
   DeviceRepository()
     : _dio = Dio(
@@ -99,6 +121,108 @@ class DeviceRepository {
           ? normalizedManufacturer
           : null,
     );
+  }
+
+  Future<DeviceIdentifierOptions> fetchIdentifierOptions({
+    required String accessToken,
+  }) async {
+    final response = await _dio.get<Map<String, dynamic>>(
+      AppConfig.zeroTouchDeviceIdentifierOptionsPath,
+      queryParameters: {'forceSync': 'true'},
+      options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+    );
+
+    final data = response.data ?? <String, dynamic>{};
+    final manufacturers =
+        (data['manufacturers'] as List<dynamic>? ?? const <dynamic>[])
+            .whereType<String>()
+            .map((item) => item.trim())
+            .where((item) => item.isNotEmpty)
+            .toList();
+
+    final rawModelsByManufacturer =
+        data['modelsByManufacturer'] as Map<String, dynamic>? ??
+        const <String, dynamic>{};
+
+    final modelsByManufacturer = <String, List<String>>{};
+    for (final entry in rawModelsByManufacturer.entries) {
+      final values = (entry.value as List<dynamic>? ?? const <dynamic>[])
+          .whereType<String>()
+          .map((item) => item.trim())
+          .where((item) => item.isNotEmpty)
+          .toList();
+      modelsByManufacturer[entry.key] = values;
+    }
+
+    return DeviceIdentifierOptions(
+      manufacturers: manufacturers,
+      modelsByManufacturer: modelsByManufacturer,
+    );
+  }
+
+  Future<BulkClaimSummary> bulkClaimDevices({
+    required String accessToken,
+    required String customerId,
+    required String identifierType,
+    required List<String> values,
+    required String manufacturer,
+    required String model,
+    String? configurationId,
+  }) async {
+    final normalizedType = identifierType.trim().toLowerCase();
+    final normalizedValues = values
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+
+    if (normalizedValues.isEmpty) {
+      throw Exception('Debes ingresar al menos un identificador.');
+    }
+
+    final devices = normalizedValues.map((item) {
+      if (normalizedType == 'imei') {
+        return <String, dynamic>{'imei': item};
+      }
+
+      return <String, dynamic>{
+        'serialNumber': item,
+        'manufacturer': manufacturer.trim(),
+        'model': model.trim(),
+      };
+    }).toList();
+
+    final payload = <String, dynamic>{
+      'customerId': customerId,
+      'identifierType': normalizedType,
+      'devices': devices,
+    };
+
+    final normalizedConfigurationId = configurationId?.trim() ?? '';
+    if (normalizedConfigurationId.isNotEmpty) {
+      payload['configurationId'] = normalizedConfigurationId;
+    }
+
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        AppConfig.zeroTouchDeviceBulkClaimPath,
+        data: payload,
+        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      );
+
+      final summary =
+          response.data?['summary'] as Map<String, dynamic>? ??
+          const <String, dynamic>{};
+
+      return BulkClaimSummary(
+        total: (summary['total'] as num?)?.toInt() ?? normalizedValues.length,
+        successCount:
+            (summary['successCount'] as num?)?.toInt() ??
+            normalizedValues.length,
+        failedCount: (summary['failedCount'] as num?)?.toInt() ?? 0,
+      );
+    } catch (error) {
+      _throwFriendlyError(error);
+    }
   }
 
   Future<void> deleteDevice({

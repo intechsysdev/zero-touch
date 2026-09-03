@@ -76,4 +76,34 @@ class DeviceController extends StateNotifier<AsyncValue<List<ManagedDevice>>> {
       );
     });
   }
+
+  Future<BulkClaimSummary> addDevicesBulk({
+    required String accessToken,
+    required String customerId,
+    required String identifierType,
+    required List<String> values,
+    required String manufacturer,
+    required String model,
+    String? configurationId,
+  }) async {
+    state = const AsyncValue.loading();
+    final summary = await _repository.bulkClaimDevices(
+      accessToken: accessToken,
+      customerId: customerId,
+      identifierType: identifierType,
+      values: values,
+      manufacturer: manufacturer,
+      model: model,
+      configurationId: configurationId,
+    );
+
+    state = await AsyncValue.guard(
+      () => _repository.fetchDevices(
+        accessToken: accessToken,
+        customerId: customerId,
+      ),
+    );
+
+    return summary;
+  }
 }
