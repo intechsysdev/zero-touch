@@ -19,8 +19,8 @@ class AuthRepository {
   final Dio _dio;
 
   Future<AuthSession> signIn({
-    required String email,
     required String clientId,
+    String email = '',
   }) async {
     if (clientId.trim().isEmpty) {
       throw Exception('Client ID is required.');
@@ -54,15 +54,27 @@ class AuthRepository {
       final zeroTouchCustomerId =
           data['zeroTouchCustomerId']?.toString() ??
           (zeroTouchCustomerName?.split('/').last);
+      final samsungCustomerId =
+          data['samsungCustomerId']?.toString() ?? normalizedClientId;
+      final preferredEnrollment = data['preferredEnrollment']?.toString();
+
+      final zeroTouchAvailable =
+          data['zeroTouchAvailable'] == true ||
+          (zeroTouchCustomerId != null && zeroTouchCustomerId.isNotEmpty);
+      final samsungAvailable =
+          data['samsungAvailable'] == true || samsungCustomerId.isNotEmpty;
 
       return AuthSession(
         accessToken: accessToken,
         companyName: (data['companyName'] ?? data['company'] ?? 'Intechsys')
             .toString(),
-        adminEmail: (data['email'] ?? normalizedEmail).toString(),
         clientId: (data['clientId'] ?? normalizedClientId).toString(),
+        zeroTouchAvailable: zeroTouchAvailable,
+        samsungAvailable: samsungAvailable,
         zeroTouchCustomerName: zeroTouchCustomerName,
         zeroTouchCustomerId: zeroTouchCustomerId,
+        samsungCustomerId: samsungCustomerId,
+        preferredEnrollment: preferredEnrollment,
       );
     } on DioException catch (error) {
       final responseData = error.response?.data;

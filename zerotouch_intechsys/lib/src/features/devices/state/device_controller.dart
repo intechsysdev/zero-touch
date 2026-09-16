@@ -22,11 +22,13 @@ class DeviceController extends StateNotifier<AsyncValue<List<ManagedDevice>>> {
   Future<void> loadDevices({
     required String accessToken,
     required String customerId,
+    String platform = 'zerotouch',
   }) async {
     state = await AsyncValue.guard(
       () => _repository.fetchDevices(
         accessToken: accessToken,
         customerId: customerId,
+        platform: platform,
       ),
     );
   }
@@ -62,6 +64,7 @@ class DeviceController extends StateNotifier<AsyncValue<List<ManagedDevice>>> {
     required String accessToken,
     required String customerId,
     required ManagedDevice device,
+    String platform = 'zerotouch',
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
@@ -69,10 +72,12 @@ class DeviceController extends StateNotifier<AsyncValue<List<ManagedDevice>>> {
         device: device,
         accessToken: accessToken,
         customerId: customerId,
+        platform: platform,
       );
       return _repository.fetchDevices(
         accessToken: accessToken,
         customerId: customerId,
+        platform: platform,
       );
     });
   }
@@ -84,6 +89,7 @@ class DeviceController extends StateNotifier<AsyncValue<List<ManagedDevice>>> {
     required List<String> values,
     required String manufacturer,
     required String model,
+    String platform = 'zerotouch',
     String? configurationId,
   }) async {
     state = const AsyncValue.loading();
@@ -94,6 +100,7 @@ class DeviceController extends StateNotifier<AsyncValue<List<ManagedDevice>>> {
       values: values,
       manufacturer: manufacturer,
       model: model,
+      platform: platform,
       configurationId: configurationId,
     );
 
@@ -101,6 +108,7 @@ class DeviceController extends StateNotifier<AsyncValue<List<ManagedDevice>>> {
       () => _repository.fetchDevices(
         accessToken: accessToken,
         customerId: customerId,
+        platform: platform,
       ),
     );
 

@@ -17,10 +17,10 @@ class AuthController extends StateNotifier<AsyncValue<AuthSession?>> {
 
   final AuthRepository _authRepository;
 
-  Future<void> signIn({required String email, required String clientId}) async {
+  Future<void> signIn({required String clientId, String email = ''}) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() {
-      return _authRepository.signIn(email: email, clientId: clientId);
+      return _authRepository.signIn(clientId: clientId, email: email);
     });
   }
 

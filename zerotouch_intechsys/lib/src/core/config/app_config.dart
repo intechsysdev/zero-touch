@@ -22,4 +22,9 @@ class AppConfig {
   static const String zeroTouchDeviceBulkClaimPath =
       '/zerotouch/devices/claim/bulk';
   static const String zeroTouchDeviceUnclaimPath = '/zerotouch/devices/unclaim';
+
+  static const String samsungDevicesPath = '/samsung/devices';
+  static const String samsungDeviceBulkClaimPath =
+      '/samsung/devices/claim/bulk';
+  static const String samsungDeviceUnclaimPath = '/samsung/devices/unclaim';
 }

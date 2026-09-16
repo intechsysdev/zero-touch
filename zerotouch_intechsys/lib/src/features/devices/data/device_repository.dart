@@ -40,6 +40,24 @@ class DeviceRepository {
 
   final Dio _dio;
 
+  String _devicesPathForPlatform(String platform) {
+    return platform == 'samsung'
+        ? AppConfig.samsungDevicesPath
+        : AppConfig.zeroTouchDevicesPath;
+  }
+
+  String _bulkClaimPathForPlatform(String platform) {
+    return platform == 'samsung'
+        ? AppConfig.samsungDeviceBulkClaimPath
+        : AppConfig.zeroTouchDeviceBulkClaimPath;
+  }
+
+  String _unclaimPathForPlatform(String platform) {
+    return platform == 'samsung'
+        ? AppConfig.samsungDeviceUnclaimPath
+        : AppConfig.zeroTouchDeviceUnclaimPath;
+  }
+
   Never _throwFriendlyError(Object error) {
     if (error is DioException) {
       final data = error.response?.data;
@@ -57,22 +75,28 @@ class DeviceRepository {
   Future<List<ManagedDevice>> fetchDevices({
     required String accessToken,
     required String customerId,
+    String platform = 'zerotouch',
   }) async {
-    final response = await _dio.get<Map<String, dynamic>>(
-      AppConfig.zeroTouchDevicesPath,
-      queryParameters: {'customerId': customerId, 'pageSize': 50},
-      options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
-    );
+    try {
+      final response = await _dio.get<Map<String, dynamic>>(
+        _devicesPathForPlatform(platform),
+        queryParameters: {'customerId': customerId, 'pageSize': 50},
+        options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+      );
 
-    final data = response.data ?? <String, dynamic>{};
-    final devicesRaw = (data['devices'] as List<dynamic>? ?? const <dynamic>[]);
+      final data = response.data ?? <String, dynamic>{};
+      final devicesRaw =
+          (data['devices'] as List<dynamic>? ?? const <dynamic>[]);
 
-    final devices = devicesRaw
-        .whereType<Map<String, dynamic>>()
-        .map(_mapToManagedDevice)
-        .toList();
+      final devices = devicesRaw
+          .whereType<Map<String, dynamic>>()
+          .map(_mapToManagedDevice)
+          .toList();
 
-    return devices..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return devices..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    } catch (error) {
+      _throwFriendlyError(error);
+    }
   }
 
   Future<ManagedDevice> createDevice({
@@ -167,6 +191,7 @@ class DeviceRepository {
     required List<String> values,
     required String manufacturer,
     required String model,
+    String platform = 'zerotouch',
     String? configurationId,
   }) async {
     final normalizedType = identifierType.trim().toLowerCase();
@@ -180,6 +205,10 @@ class DeviceRepository {
     }
 
     final devices = normalizedValues.map((item) {
+      if (platform == 'samsung') {
+        return <String, dynamic>{'imei': item};
+      }
+
       if (normalizedType == 'imei') {
         return <String, dynamic>{'imei': item};
       }
@@ -193,9 +222,18 @@ class DeviceRepository {
 
     final payload = <String, dynamic>{
       'customerId': customerId,
-      'identifierType': normalizedType,
       'devices': devices,
     };
+
+    if (platform == 'samsung') {
+      final profileId = (configurationId ?? '').trim();
+      if (profileId.isEmpty) {
+        throw Exception('Para Samsung debes ingresar Profile ID.');
+      }
+      payload['profileId'] = profileId;
+    } else {
+      payload['identifierType'] = normalizedType;
+    }
 
     final normalizedConfigurationId = configurationId?.trim() ?? '';
     if (normalizedConfigurationId.isNotEmpty) {
@@ -204,7 +242,7 @@ class DeviceRepository {
 
     try {
       final response = await _dio.post<Map<String, dynamic>>(
-        AppConfig.zeroTouchDeviceBulkClaimPath,
+        _bulkClaimPathForPlatform(platform),
         data: payload,
         options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
       );
@@ -229,11 +267,26 @@ class DeviceRepository {
     required ManagedDevice device,
     required String accessToken,
     required String customerId,
+    String platform = 'zerotouch',
   }) async {
     final identifier = <String, String>{};
     final imei = (device.imei ?? '').trim();
     final serial = device.serialNumber.trim();
     final manufacturer = (device.manufacturer ?? '').trim();
+
+    if (platform == 'samsung') {
+      final deviceIds = <String>[if (imei.isNotEmpty) imei else serial];
+      try {
+        await _dio.post<Map<String, dynamic>>(
+          _unclaimPathForPlatform(platform),
+          data: {'deviceIds': deviceIds},
+          options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
+        );
+      } catch (error) {
+        _throwFriendlyError(error);
+      }
+      return;
+    }
 
     if (imei.isNotEmpty) {
       identifier['imei'] = imei;
@@ -249,7 +302,7 @@ class DeviceRepository {
 
     try {
       await _dio.post<Map<String, dynamic>>(
-        AppConfig.zeroTouchDeviceUnclaimPath,
+        _unclaimPathForPlatform(platform),
         data: {'deviceIdentifier': identifier},
         options: Options(headers: {'Authorization': 'Bearer $accessToken'}),
       );
@@ -276,6 +329,7 @@ class DeviceRepository {
     final id = (raw['deviceId'] ?? raw['name'] ?? serial).toString();
 
     DateTime createdAt = DateTime.now();
+    String assignedUser = 'Zero Touch';
     final claims = raw['claims'];
     if (claims is List && claims.isNotEmpty) {
       final firstClaim = claims.first;
@@ -284,6 +338,10 @@ class DeviceRepository {
         if (dateText != null) {
           createdAt = DateTime.tryParse(dateText) ?? DateTime.now();
         }
+        final ownerCompanyId = firstClaim['ownerCompanyId']?.toString().trim();
+        if (ownerCompanyId != null && ownerCompanyId.isNotEmpty) {
+          assignedUser = ownerCompanyId;
+        }
       }
     }
 
@@ -291,7 +349,7 @@ class DeviceRepository {
       id: id,
       serialNumber: serial,
       model: model,
-      assignedUser: 'Zero Touch',
+      assignedUser: assignedUser,
       createdAt: createdAt,
       imei: imei,
       manufacturer: manufacturer,

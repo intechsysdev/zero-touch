@@ -32,8 +32,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     await ref
         .read(authControllerProvider.notifier)
         .signIn(
-          email: _emailController.text,
           clientId: _clientIdController.text,
+          email: _emailController.text,
         );
   }
 
@@ -78,12 +78,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       const Text(
                         'Ingresa tu Client ID para cargar y administrar los dispositivos de tu empresa.',
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 12),
                       TextFormField(
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                         decoration: const InputDecoration(
-                          labelText: 'Email (opcional por ahora)',
+                          labelText: 'Correo (requerido para Samsung Knox)',
                         ),
                       ),
                       const SizedBox(height: 12),
