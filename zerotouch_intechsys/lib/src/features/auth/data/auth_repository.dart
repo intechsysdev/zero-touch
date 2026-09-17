@@ -1,3 +1,4 @@
+// ignore_for_file: avoid_print
 import 'dart:async';
 
 import 'package:dio/dio.dart';
@@ -29,6 +30,19 @@ class AuthRepository {
     final normalizedClientId = clientId.trim();
     final normalizedEmail = email.trim();
 
+    print('═══════════════════════════════════════════════════════');
+    print('[AUTH LOGIN] Iniciando sesión...');
+    print('[AUTH LOGIN] Base URL: "${AppConfig.backendBaseUrl}"');
+    print('[AUTH LOGIN] Endpoint: "${AppConfig.authLoginPath}"');
+    print(
+      '[AUTH LOGIN] URL Completa: "${AppConfig.backendBaseUrl}${AppConfig.authLoginPath}"',
+    );
+    print('[AUTH LOGIN] Client ID: "$normalizedClientId"');
+    print(
+      '[AUTH LOGIN] Email: "${normalizedEmail.isEmpty ? '(sin correo)' : normalizedEmail}"',
+    );
+    print('═══════════════════════════════════════════════════════');
+
     try {
       final response = await _dio.post<Map<String, dynamic>>(
         AppConfig.authLoginPath,
@@ -38,6 +52,9 @@ class AuthRepository {
           'clientId': normalizedClientId,
         },
       );
+
+      print('✅ [AUTH SUCCESS] Status: ${response.statusCode}');
+      print('✅ [AUTH SUCCESS] Body: ${response.data}');
 
       final data = response.data;
       if (data == null) {
@@ -77,20 +94,42 @@ class AuthRepository {
         preferredEnrollment: preferredEnrollment,
       );
     } on DioException catch (error) {
+      print('❌ [AUTH DIO ERROR]:');
+      print('   - Type: ${error.type}');
+      print('   - Message: ${error.message}');
+      print('   - Request URI: ${error.requestOptions.uri}');
+      print('   - Status Code: ${error.response?.statusCode}');
+      print('   - Response Data: ${error.response?.data}');
+
       final responseData = error.response?.data;
       if (responseData is Map<String, dynamic>) {
         final message = responseData['message'] ?? responseData['error'];
         if (message != null) {
+          print('   - Server Message: $message');
           throw Exception(message.toString());
         }
       }
 
       if (error.response?.statusCode == 401 ||
           error.response?.statusCode == 403) {
-        throw Exception('Credenciales o Client ID incorrectos.');
+        throw Exception(
+          'Credenciales o Client ID incorrectos (HTTP ${error.response?.statusCode}).',
+        );
       }
 
-      throw Exception('No fue posible iniciar sesion en este momento.');
+      if (error.response?.statusCode != null) {
+        throw Exception(
+          'Error del servidor (${error.response!.statusCode}): ${error.response?.statusMessage ?? error.message}',
+        );
+      }
+
+      throw Exception(
+        'Error de conexión con el servidor: ${error.message ?? "URL inalcanzable"}',
+      );
+    } catch (e, stack) {
+      print('❌ [AUTH GENERAL ERROR]: $e');
+      print('   Stack: $stack');
+      rethrow;
     }
   }
 }

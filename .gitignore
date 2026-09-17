@@ -1,0 +1,98 @@
+# ===== OS Artifacts =====
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ===== iCloud Sync Conflict Files =====
+# Files/dirs with " 2", " 3", etc. appended by iCloud Drive
+* 2*
+* 3*
+* 4*
+* 5*
+* 6*
+* 7*
+* 8*
+* 9*
+* 10*
+* 11*
+* 12*
+*.icloud
+
+# ===== Environment & Secret Files =====
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.p12
+*.keystore
+*.jks
+*service-account*.json
+
+# ===== IDE & Editor =====
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ===== Node.js =====
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===== Web Build Artifacts =====
+**/dist/
+**/dist-ssr/
+
+# ===== Flutter / Dart =====
+**/.dart_tool/
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/build/
+**/coverage/
+.packages
+.flutter-plugins
+
+# ===== Flutter Generated Files =====
+**/ios/Flutter/Generated.xcconfig
+**/ios/Flutter/flutter_export_environment.sh
+**/ios/Flutter/.last_build_id
+**/ios/Flutter/ephemeral/
+**/macos/Flutter/ephemeral/
+**/macos/Flutter/Flutter-Generated.xcconfig
+**/macos/Flutter/GeneratedPluginRegistrant.*
+**/linux/flutter/ephemeral/
+**/linux/flutter/generated_plugin_registrant.*
+**/linux/flutter/generated_plugins.cmake
+**/windows/flutter/ephemeral/
+**/windows/flutter/generated_plugin_registrant.*
+**/windows/flutter/generated_plugins.cmake
+
+# ===== Android =====
+**/android/local.properties
+**/android/key.properties
+**/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# ===== Database =====
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# ===== Logs =====
+*.log
+
